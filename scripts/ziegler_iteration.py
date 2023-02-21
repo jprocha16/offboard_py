@@ -13,9 +13,12 @@ import seaborn as sea
 import matplotlib.pyplot as plt
 import numpy as np
 
-TIME_WAIT_OFFBOARD = 10
-TIME_WAIT_GO_AWAY = 10
-TIME_WAIT_LANDING = 30
+
+
+TIME_WAIT_OFFBOARD = 12
+TIME_WAIT_GO_AWAY = 15
+TIME_WAIT_LANDING = 70
+
 
 def create_plots(bag_fn_basename):
     # Give filename of rosbag
@@ -80,7 +83,7 @@ def create_plots(bag_fn_basename):
 
 def main():
     # ativar modo landing
-    print("changing to landing(offboard mode")
+    print("changing to landing(offboard mode)")
     change_mode_cmd = """rostopic pub -1 uav/mode std_msgs/UInt8 '1'"""
     sp.call(change_mode_cmd, shell=True)
 
@@ -89,8 +92,9 @@ def main():
 
     # enviar comando de deslocação para ponto longe de landing 2x
     print("sending command go away")
-    cmd_go_away = """rostopic pub -1 mavros/setpoint_position/local geometry_msgs/PoseStamped '{header: {stamp: now, frame_id: "base_footprint"}, pose: {position: {x: 15, y: 15, z: 15}, orientation: {w: 1.0}}}'"""
-    sp.call(cmd_go_away, shell=True)
+    cmd_go_away = """rostopic pub -1 mavros/setpoint_position/local geometry_msgs/PoseStamped '{header: {stamp: now, frame_id: "base_footprint"}, pose: {position: {x: 0, y: 0, z: 15}, orientation: {w: 1.0}}}'"""
+    for i in range(2):
+        sp.call(cmd_go_away, shell=True)
 
     # esperar até chegar ao destino
     print("waiting for destination")
@@ -107,7 +111,7 @@ def main():
 
     # enviar posição para landing
     print("sending landing coord")
-    landing_pos_cmd = """rostopic pub -1 setpoint_xy geometry_msgs/PoseStamped '{header: {stamp: now, frame_id: "base_footprint"}, pose: {position: {x: 0, y: 0, z: 15}, orientation: {w: 1.0}}}'"""
+    landing_pos_cmd = """rostopic pub -1 setpoint_xy geometry_msgs/PoseStamped '{header: {stamp: now, frame_id: "base_footprint"}, pose: {position: {x: 0, y: 0, z: 10}, orientation: {w: 1.0}}}'"""
     sp.call(landing_pos_cmd, shell=True)
 
     # ativar modo landing

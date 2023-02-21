@@ -1,6 +1,6 @@
-float32 e_x # controller error for X axis
-float32 e_y # controller error for Y axis
-float32 e_z # controller error for Z axis
+float32 e_x # fusion error for X axis
+float32 e_y # fusion error for Y axis
+float32 e_z # fusion error for Z axis
 float32 v_x_cmd # commanded vel for X axis
 float32 v_y_cmd # commanded vel for Y axis
 float32 v_z_cmd # commanded vel for Z axis
