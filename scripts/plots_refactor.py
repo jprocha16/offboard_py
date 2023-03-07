@@ -7,15 +7,17 @@ import numpy as np
 from functools import reduce
 
 
-bag_fn = r'/home/ciafa/2023_02_19__17_57_53.bag'
+bag_fn = r'/home/ciafa/2023_03_06__20_35_00.bag'
 topics = [
     '/mavros/local_position/pose',
     '/uav/marker/position',
     '/uav/fused_pose',
     '/uav/controller/errors',
+    '/mavros/setpoint_velocity/cmd_vel',
     '/uav/ground_truth',
-    '/uav/marker/arucos',
+    '/uav/marker/arucos'
     ]
+# '/uav/controller/errors',
 
 # Give filename of rosbag
 b = bagreader(bag_fn)
@@ -30,7 +32,7 @@ for topic in topics:
     df = pd.read_csv(data)
     dataframes[topic] = df
 
-# rename all position cols
+# Rename all position cols
 dataframes['/mavros/local_position/pose'].rename(columns={
     'pose.position.x': 'x',
     'pose.position.y': 'y',
@@ -52,27 +54,36 @@ dataframes['/uav/ground_truth'].rename(columns={
     'z': 'z'
 }, inplace=True)
 
-# init fig
+# Rename commanded velocities cols
+dataframes['/mavros/setpoint_velocity/cmd_vel'].rename(columns={
+    'twist.linear.x': 'x',
+    'twist.linear.y': 'y',
+    'twist.linear.z': 'z'
+}, inplace=True)
+
+# Init fig
 plt.figure(figsize=(18, 8))
 
 # PLOT 1 - X axis
-plt.subplot(2, 3, 1)
-# gps position
+plt.subplot(3, 3, 1)
+# PX4 position
 plt.plot(dataframes['/mavros/local_position/pose'].Time, dataframes['/mavros/local_position/pose'].x,
          label="PX4 position")
-# vision position
+# Vision position
 plt.plot(dataframes['/uav/marker/position'].Time, dataframes['/uav/marker/position'].x, label="Vision position")
-# fusion position
+# Fusion position
 plt.plot(dataframes['/uav/fused_pose'].Time, dataframes['/uav/fused_pose'].x, label="Fused position")
-# # ground truth position
+# Ground truth position
 plt.plot(dataframes['/uav/ground_truth'].Time, dataframes['/uav/ground_truth'].x, label="Ground truth")
+
+plt.title('X Axis')
 plt.xlabel('Time')
 plt.ylabel('X_Axis Position')
 plt.legend()
 plt.grid()
 
 # PLOT 2 - Y axis
-plt.subplot(2, 3, 2)
+plt.subplot(3, 3, 2)
 # gps position
 plt.plot(dataframes['/mavros/local_position/pose'].Time, dataframes['/mavros/local_position/pose'].y,
          label="PX4 position")
@@ -80,15 +91,17 @@ plt.plot(dataframes['/mavros/local_position/pose'].Time, dataframes['/mavros/loc
 plt.plot(dataframes['/uav/marker/position'].Time, dataframes['/uav/marker/position'].y, label="Vision position")
 # fusion position
 plt.plot(dataframes['/uav/fused_pose'].Time, dataframes['/uav/fused_pose'].y, label="Fused position")
-# # ground truth position
+# ground truth position
 plt.plot(dataframes['/uav/ground_truth'].Time, dataframes['/uav/ground_truth'].y, label="Ground truth")
+
+plt.title('Y Axis')
 plt.xlabel('Time')
 plt.ylabel('Y_Axis Position')
 plt.legend()
 plt.grid()
 
 # PLOT 3 - Z axis
-plt.subplot(2, 3, 3)
+plt.subplot(3, 3, 3)
 # gps position
 plt.plot(dataframes['/mavros/local_position/pose'].Time, dataframes['/mavros/local_position/pose'].z,
          label="PX4 position")
@@ -96,35 +109,42 @@ plt.plot(dataframes['/mavros/local_position/pose'].Time, dataframes['/mavros/loc
 plt.plot(dataframes['/uav/marker/position'].Time, dataframes['/uav/marker/position'].z, label="Vision position")
 # fusion position
 plt.plot(dataframes['/uav/fused_pose'].Time, dataframes['/uav/fused_pose'].z, label="Fused position")
-# # ground truth position
+# ground truth position
 plt.plot(dataframes['/uav/ground_truth'].Time, dataframes['/uav/ground_truth'].z, label="Ground truth")
+
+plt.title('Z Axis')
 plt.xlabel('Time')
-plt.ylabel('Z_Axis Position')
+plt.ylabel('Position')
 plt.legend()
 plt.grid()
 
 # PLOT 4 - Controller telemetry
-plt.subplot(2, 3, 4)
-plt.plot(dataframes['/uav/controller/errors'].Time, dataframes['/uav/controller/errors'].v_x_cmd, label="Vx cmd")
-plt.plot(dataframes['/uav/controller/errors'].Time, dataframes['/uav/controller/errors'].v_y_cmd, label="Vy cmd")
-plt.plot(dataframes['/uav/controller/errors'].Time, dataframes['/uav/controller/errors'].v_z_cmd, label="Vz cmd")
+plt.subplot(3, 3, 4)
+plt.plot(dataframes['/mavros/setpoint_velocity/cmd_vel'].Time, dataframes['/mavros/setpoint_velocity/cmd_vel'].x,
+         label="Vx cmd")
+plt.plot(dataframes['/mavros/setpoint_velocity/cmd_vel'].Time, dataframes['/mavros/setpoint_velocity/cmd_vel'].y,
+         label="Vy cmd")
+plt.plot(dataframes['/mavros/setpoint_velocity/cmd_vel'].Time, dataframes['/mavros/setpoint_velocity/cmd_vel'].z,
+         label="Vz cmd")
 
+plt.title('Controller telemetry')
 plt.xlabel('Time')
 plt.ylabel('Commanded Velocities')
 plt.legend()
 plt.grid()
 
-# PLOT 5 - Controller telemetry
-plt.subplot(2, 3, 5)
+# PLOT 5 - Detected ArUco IDs
+plt.subplot(3, 3, 5)
 plt.plot(dataframes['/uav/marker/arucos'].Time, dataframes['/uav/marker/arucos'].id, "r.")
 
+plt.title('Detected IDs')
 plt.xlabel('Time')
 plt.ylabel('Ids')
 # plt.legend()
 plt.grid()
 
 # PLOT 6
-# copy dataframes
+# Copy dataframes
 topics2 = [
     '/mavros/local_position/pose',
     '/uav/marker/position',
@@ -142,7 +162,7 @@ prefixes = {
     '/uav/fused_pose': 'fused_',
 }
 
-# filter all time steps before the first aruco detection
+# Filter all time steps before the first aruco detection
 t_start = dfs_for_errors['/uav/marker/position'].Time.values[0]
 for t in topics2:
     dfs_for_errors[t] = dfs_for_errors[t][dfs_for_errors[t].Time > t_start]
@@ -151,15 +171,15 @@ for t in topics2:
     dfs_for_errors[t].set_index("Time", inplace=True)
     dfs_for_errors[t] = dfs_for_errors[t].add_prefix(prefixes.get(t, ""))
 
-# merge all dataframes
+# Merge all dataframes
 df_merged = reduce(lambda  left,right: left.join(right, how='outer'), dfs_for_errors.values())
 df_merged = df_merged.interpolate(axis=0).dropna()
 
-# compute errors
+# Compute errors
 for p in prefixes.values():
     df_merged[p+"error"] = ((df_merged[p+"x"] - df_merged["x"]) ** 2 + (df_merged[p+"y"] - df_merged["y"]) ** 2 +
                             (df_merged[p+"z"] - df_merged["z"]) ** 2) ** 0.5
-print(df_merged)
+# print(df_merged)
 
 px4_mse = df_merged["px4_error"].mean()
 vision_mse = df_merged["marker_error"].mean()
@@ -169,13 +189,27 @@ print('PX4 MSE = ', px4_mse)
 print('Vision MSE = ', vision_mse)
 print('Fusion MSE = ', fusion_mse)
 
-plt.subplot(2, 3, 6)
+plt.subplot(3, 3, 6)
 # df_merged[[p+"error" for p in prefixes.values()]].plot()
 plt.plot(df_merged[[p+"error" for p in prefixes.values()]])
-# plt.title("errors")
+plt.title('Position errors')
 plt.xlabel('Time')
 plt.ylabel('Errors')
 # plt.legend()
 plt.grid()
 
+# PLOT 7
+plt.subplot(3, 3, 7)
+
+plt.plot(dataframes['/uav/controller/errors'].Time, dataframes['/uav/controller/errors'].e_x, label="X error")
+plt.plot(dataframes['/uav/controller/errors'].Time, dataframes['/uav/controller/errors'].e_y, label="Y error")
+plt.plot(dataframes['/uav/controller/errors'].Time, dataframes['/uav/controller/errors'].e_z, label="Z error")
+
+plt.xlabel('Time')
+plt.ylabel('Position errors')
+plt.legend()
+plt.grid()
+
 plt.show()
+
+# print('Distance between center of ArUco and UAV = ', dataframes['/uav/controller/errors'])

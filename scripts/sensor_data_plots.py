@@ -13,16 +13,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 TIME_WAIT_OFFBOARD = 15
-TIME_WAIT_GO_AWAY = 15
-TIME_WAIT_LANDING = 150
+TIME_WAIT_GO_AWAY = 10
+TIME_WAIT_GO_LAND_COORD = 15
+TIME_WAIT_LANDING = 180
 
 TOPICS_TO_SUBSCRIBE = [
     "/mavros/local_position/pose",
     "/uav/marker/position",
     "/uav/marker/arucos",
     "/uav/controller/errors",
+    "/mavros/setpoint_velocity/cmd_vel",
     "/uav/fused_pose",
-    "/uav/ground_truth"
+    "/uav/ground_truth",
     ]
 
 
@@ -215,6 +217,18 @@ def main():
     "base_footprint"}, pose: {position: {x: 0, y: 0, z: 10}, orientation: {w: 1.0}}}'"""
     sp.call(landing_pos_cmd, shell=True)
 
+    # Move UAV to landing coord
+    print("Sending UAV to landing coord")
+    cmd_go_to_land_coord = """rostopic pub -1 uav/goal_pose geometry_msgs/PoseStamped '{header: {stamp: now, frame_id: 
+        "base_footprint"}, pose: {position: {x: 0, y: 0, z: 10}, orientation: {w: 1.0}}}'"""
+    sp.call(cmd_go_to_land_coord, shell=True)
+
+    # Wait until UAV reaches land coord
+    print("Waiting for reaching landing coord")
+    #   method 1: wait X s
+    time.sleep(TIME_WAIT_GO_LAND_COORD)
+    #   abordagem 2: monitorizar telemetria e esperar até erro ser inferior a E
+
     # Init vision node
     print("Starting vision sensor")
     # landing_pos_cmd = """roslaunch landing_sensor_py landing_sensor.launch"""
@@ -228,6 +242,7 @@ def main():
     print(f"Starting rosbag record, path:{bag_fn_basename}")
     topic_lst = ' '.join(TOPICS_TO_SUBSCRIBE)
     p_record = sp.Popen(f"rosbag record {topic_lst} -O {bag_fn_basename}".split())
+    # p_record = sp.Popen(f"rosbag record -a -O {bag_fn_basename}".split())
 
     # Change to landing mode
     print("Changing to landing mode")
@@ -240,7 +255,7 @@ def main():
     time.sleep(TIME_WAIT_LANDING)
     #   abordagem 2: monitorizar telemetria e esperar até erro ser inferior a E
 
-    # ---STOP ALL PROCCESSES---
+    # ---STOP ALL PROCESSES---
     # Stop rosbag record
     print("Stopping rosbag record")
     # p_record.kill()
