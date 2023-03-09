@@ -2,7 +2,7 @@
 
 import math
 import rospy
-from std_msgs.msg import UInt8
+from std_msgs.msg import UInt8, String
 from geometry_msgs.msg import PoseStamped, TwistStamped, Point
 from mavros_msgs.msg import State
 from mavros_msgs.srv import CommandBool, CommandBoolRequest, SetMode, SetModeRequest
@@ -99,6 +99,7 @@ class UAVController:
         # Pub landing error
         self.error_pub = rospy.Publisher("/uav/controller/errors", ControllerErrors, queue_size=10)
         self.ground_truth_pub = rospy.Publisher("/uav/ground_truth", Point, queue_size=10)
+        self.state_pub = rospy.Publisher('/uav/state', String, queue_size=10)
 
         rospy.wait_for_service("/mavros/cmd/arming")
         self.arming_client = rospy.ServiceProxy("/mavros/cmd/arming", CommandBool)
@@ -281,6 +282,10 @@ class UAVController:
             else:
                 self.landing_state = 'go_to_landing_coord'
 
+            state = String()
+            state = self.landing_state
+            self.state_pub.publish(state)
+
         # Go to landing coordinate
         elif self.landing_state == 'go_to_landing_coord':
             if math.sqrt(pow(self.vx_controller.setpoint - self.local_pose.pose.position.x, 2) +
@@ -291,6 +296,10 @@ class UAVController:
                 else:
                     if (rospy.Time.now() - self.time_landing_coord) >= rospy.Duration(10):
                         self.landing_state = 'descend_to_hover'
+
+            state = String()
+            state = self.landing_state
+            self.state_pub.publish(state)
 
         # Descend to hover altitude
         elif self.landing_state == 'descend_to_hover':
@@ -310,7 +319,6 @@ class UAVController:
 
             self.vz_controller.setpoint = self.vz_controller.setpoint + self.v_particle_filtered * delta_t
 
-            # Publish commanded velocities
             vel = TwistStamped()
             vel.twist.linear.x = vel_x
             vel.twist.linear.y = vel_y
@@ -329,11 +337,14 @@ class UAVController:
                     abs(self.v_particle_filtered) <= 0.01 and abs(self.vz_controller.setpoint - self.alt_hover) <= 0.05:
                 self.landing_state = 'hover'
 
+            state = String()
+            state = self.landing_state
+            self.state_pub.publish(state)
+
         # Hover at desired height
         elif self.landing_state == 'hover':
             vel_x, vel_y, vel_z, delta_t, e_x, e_y, e_z = self.run_controllers()
 
-            # Publish commanded velocities
             vel = TwistStamped()
             vel.twist.linear.x = vel_x
             vel.twist.linear.y = vel_y
@@ -347,7 +358,7 @@ class UAVController:
             self.error_pub.publish(variables)
 
             if math.sqrt(pow(self.vx_controller.setpoint - self.local_pose.pose.position.x, 2) +
-                         pow(self.vy_controller.setpoint - self.local_pose.pose.position.y, 2)) <= 0.10:
+                         pow(self.vy_controller.setpoint - self.local_pose.pose.position.y, 2)) <= 0.05:
                 if self.time_hover is None:
                     self.time_hover = rospy.Time.now()
                 else:
@@ -356,6 +367,10 @@ class UAVController:
             # Ensures 5 consecutive seconds
             else:
                 self.time_hover = None
+
+            state = String()
+            state = self.landing_state
+            self.state_pub.publish(state)
 
         # Final descent for landing on marker
         elif self.landing_state == 'final_descend':
@@ -374,7 +389,6 @@ class UAVController:
 
             self.vz_controller.setpoint = self.vz_controller.setpoint + self.v_particle_filtered * delta_t
 
-            # Publish commanded velocities
             vel = TwistStamped()
             vel.twist.linear.x = vel_x
             vel.twist.linear.y = vel_y
@@ -395,18 +409,25 @@ class UAVController:
                     if (rospy.Time.now() - self.time_ground_contact) >= rospy.Duration(5):
                         self.landing_state = 'landed'
 
+            state = String()
+            state = self.landing_state
+            self.state_pub.publish(state)
+
         # UAV landed
         elif self.landing_state == 'landed':
             vel_x = 0
             vel_y = 0
             vel_z = 0
 
-            # Publish commanded velocities
             vel = TwistStamped()
             vel.twist.linear.x = vel_x
             vel.twist.linear.y = vel_y
             vel.twist.linear.z = vel_z
             self.vel_pub.publish(vel)
+
+            state = String()
+            state = self.landing_state
+            self.state_pub.publish(state)
 
         # if self.landing_state == 'descend_to_hover' or self.landing_state == 'hover' or self.landing_state == \
         #         'final_descend' or self.landing_state == 'landed':

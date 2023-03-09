@@ -7,7 +7,7 @@ import numpy as np
 from functools import reduce
 
 
-bag_fn = r'/home/ciafa/2023_03_06__20_35_00.bag'
+bag_fn = r'/home/ciafa/2023_03_07__13_50_31.bag'
 topics = [
     '/mavros/local_position/pose',
     '/uav/marker/position',
@@ -15,7 +15,8 @@ topics = [
     '/uav/controller/errors',
     '/mavros/setpoint_velocity/cmd_vel',
     '/uav/ground_truth',
-    '/uav/marker/arucos'
+    '/uav/marker/arucos',
+    '/uav/state'
     ]
 # '/uav/controller/errors',
 
@@ -144,6 +145,14 @@ plt.ylabel('Ids')
 plt.grid()
 
 # PLOT 6
+plt.subplot(3, 3, 6)
+
+plt.step(dataframes['/uav/state'].Time, dataframes['/uav/state'].data)
+
+plt.xlabel('Time')
+plt.ylabel('State')
+plt.grid()
+
 # Copy dataframes
 topics2 = [
     '/mavros/local_position/pose',
@@ -181,25 +190,57 @@ for p in prefixes.values():
                             (df_merged[p+"z"] - df_merged["z"]) ** 2) ** 0.5
 # print(df_merged)
 
-px4_mse = df_merged["px4_error"].mean()
-vision_mse = df_merged["marker_error"].mean()
-fusion_mse = df_merged["fused_error"].mean()
+# PLOT 7
+plt.subplot(3, 3, 7)
 
-print('PX4 MSE = ', px4_mse)
-print('Vision MSE = ', vision_mse)
-print('Fusion MSE = ', fusion_mse)
+keep_states = [
+    "go_to_landing_coord",
+    "descend_to_hover",
+    "hover"
+]  # states to keep
 
-plt.subplot(3, 3, 6)
-# df_merged[[p+"error" for p in prefixes.values()]].plot()
-plt.plot(df_merged[[p+"error" for p in prefixes.values()]])
+d = dataframes["/uav/state"]
+state_min = pd.to_timedelta(d.groupby("data").min().Time, "sec")
+state_max = pd.to_timedelta(d.groupby("data").max().Time, "sec")
+t_start = state_min[keep_states].min()
+t_end = state_max[keep_states].max()
+df_state_merged = df_merged.loc[t_start:t_end]
+
+px4_mse = df_state_merged["px4_error"].mean()
+vision_mse = df_state_merged["marker_error"].mean()
+fusion_mse = df_state_merged["fused_error"].mean()
+
+print('PX4 RMSE = ', px4_mse)
+print('Vision RMSE = ', vision_mse)
+print('Fusion RMSE = ', fusion_mse)
+
+# # df_merged[[p+"error" for p in prefixes.values()]].plot()
+# plt.plot(df_merged[[p+"error" for p in prefixes.values()]])
+plt.plot(df_state_merged[[p+"error" for p in prefixes.values()]])
 plt.title('Position errors')
 plt.xlabel('Time')
 plt.ylabel('Errors')
 # plt.legend()
 plt.grid()
 
-# PLOT 7
-plt.subplot(3, 3, 7)
+# Final landing distance calculation
+landed_state = ["landed"]
+d = dataframes["/uav/state"]
+state_min = pd.to_timedelta(d.groupby("data").min().Time, "sec")
+state_max = pd.to_timedelta(d.groupby("data").max().Time, "sec")
+t_start = state_min[landed_state].min()
+t_end = state_max[landed_state].max()
+df_landed = df_merged.loc[t_start:t_end]
+
+x_avg = df_landed["x"].mean()
+y_avg = df_landed["y"].mean()
+z_avg = df_landed["z"].mean()
+
+distance = math.sqrt(x_avg ** 2 + y_avg ** 2 + z_avg ** 2)
+print('Landing error = ', distance)
+
+# PLOT 8
+plt.subplot(3, 3, 8)
 
 plt.plot(dataframes['/uav/controller/errors'].Time, dataframes['/uav/controller/errors'].e_x, label="X error")
 plt.plot(dataframes['/uav/controller/errors'].Time, dataframes['/uav/controller/errors'].e_y, label="Y error")
@@ -211,5 +252,3 @@ plt.legend()
 plt.grid()
 
 plt.show()
-
-# print('Distance between center of ArUco and UAV = ', dataframes['/uav/controller/errors'])

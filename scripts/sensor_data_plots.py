@@ -25,6 +25,7 @@ TOPICS_TO_SUBSCRIBE = [
     "/mavros/setpoint_velocity/cmd_vel",
     "/uav/fused_pose",
     "/uav/ground_truth",
+    "/uav/state",
     ]
 
 
