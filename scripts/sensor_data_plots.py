@@ -13,9 +13,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 TIME_WAIT_OFFBOARD = 15
-TIME_WAIT_GO_AWAY = 10
-TIME_WAIT_GO_LAND_COORD = 15
-TIME_WAIT_LANDING = 180
+TIME_WAIT_GO_AWAY = 7
+TIME_WAIT_GO_LAND_COORD = 10
+TIME_WAIT_LANDING = 135
 
 TOPICS_TO_SUBSCRIBE = [
     "/mavros/local_position/pose",
@@ -202,7 +202,7 @@ def main():
     # Move UAV for goal pose
     print("Sending command go away")
     cmd_go_away = """rostopic pub -1 uav/goal_pose geometry_msgs/PoseStamped '{header: {stamp: now, frame_id: 
-    "base_footprint"}, pose: {position: {x: 10, y: 10, z: 10}, orientation: {w: 1.0}}}'"""
+    "base_footprint"}, pose: {position: {x: 3, y: 3, z: 3}, orientation: {w: 1.0}}}'"""  # 10,10,10
     for i in range(2):
         sp.call(cmd_go_away, shell=True)
 
@@ -215,13 +215,13 @@ def main():
     # Send landing coord
     print("Sending landing coord")
     landing_pos_cmd = """rostopic pub -1 setpoint_xy geometry_msgs/PoseStamped '{header: {stamp: now, frame_id: 
-    "base_footprint"}, pose: {position: {x: 0, y: 0, z: 10}, orientation: {w: 1.0}}}'"""
+    "base_footprint"}, pose: {position: {x: 0, y: 0, z: 3}, orientation: {w: 1.0}}}'"""  # 0,0,10
     sp.call(landing_pos_cmd, shell=True)
 
     # Move UAV to landing coord
     print("Sending UAV to landing coord")
     cmd_go_to_land_coord = """rostopic pub -1 uav/goal_pose geometry_msgs/PoseStamped '{header: {stamp: now, frame_id: 
-        "base_footprint"}, pose: {position: {x: 0, y: 0, z: 10}, orientation: {w: 1.0}}}'"""
+        "base_footprint"}, pose: {position: {x: 0, y: 0, z: 3}, orientation: {w: 1.0}}}'"""  # 0,0,3
     sp.call(cmd_go_to_land_coord, shell=True)
 
     # Wait until UAV reaches land coord

@@ -7,7 +7,7 @@ import numpy as np
 from functools import reduce
 
 
-bag_fn = r'/home/ciafa/2023_03_07__13_50_31.bag'
+bag_fn = r'/home/ciafa/40.bag'
 topics = [
     '/mavros/local_position/pose',
     '/uav/marker/position',
@@ -194,10 +194,8 @@ for p in prefixes.values():
 plt.subplot(3, 3, 7)
 
 keep_states = [
-    "go_to_landing_coord",
-    "descend_to_hover",
     "hover"
-]  # states to keep
+]  # "go_to_landing_coord",     "descend_to_hover",
 
 d = dataframes["/uav/state"]
 state_min = pd.to_timedelta(d.groupby("data").min().Time, "sec")
@@ -210,9 +208,11 @@ px4_mse = df_state_merged["px4_error"].mean()
 vision_mse = df_state_merged["marker_error"].mean()
 fusion_mse = df_state_merged["fused_error"].mean()
 
+print('----------------------------------')
 print('PX4 RMSE = ', px4_mse)
 print('Vision RMSE = ', vision_mse)
 print('Fusion RMSE = ', fusion_mse)
+print('----------------------------------')
 
 # # df_merged[[p+"error" for p in prefixes.values()]].plot()
 # plt.plot(df_merged[[p+"error" for p in prefixes.values()]])
@@ -236,7 +236,7 @@ x_avg = df_landed["x"].mean()
 y_avg = df_landed["y"].mean()
 z_avg = df_landed["z"].mean()
 
-distance = math.sqrt(x_avg ** 2 + y_avg ** 2 + z_avg ** 2)
+distance = math.sqrt(x_avg ** 2 + y_avg ** 2)
 print('Landing error = ', distance)
 
 # PLOT 8

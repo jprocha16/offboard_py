@@ -154,7 +154,7 @@ class UAVController:
         self.k = abs(self.v_ref_initial)
 
         t = 4 / self.a
-        self.alt_hover = 0.25
+        self.alt_hover = 0.9
         self.alt_trans = self.alt_hover - self.k / self.a * math.e ** (-self.a * t) + self.k / self.a
 
     def goal_pose_cb(self, msg):
@@ -294,8 +294,11 @@ class UAVController:
                 if self.time_landing_coord is None:
                     self.time_landing_coord = rospy.Time.now()
                 else:
-                    if (rospy.Time.now() - self.time_landing_coord) >= rospy.Duration(10):
+                    if (rospy.Time.now() - self.time_landing_coord) >= rospy.Duration(5):
                         self.landing_state = 'descend_to_hover'
+            # ensures 5 consecutive seconds
+            else:
+                self.time_landing_coord = None
 
             state = String()
             state = self.landing_state
@@ -358,11 +361,12 @@ class UAVController:
             self.error_pub.publish(variables)
 
             if math.sqrt(pow(self.vx_controller.setpoint - self.local_pose.pose.position.x, 2) +
-                         pow(self.vy_controller.setpoint - self.local_pose.pose.position.y, 2)) <= 0.05:
+                         pow(self.vy_controller.setpoint - self.local_pose.pose.position.y, 2) +
+                         pow(self.vz_controller.setpoint - self.local_pose.pose.position.z, 2)) <= 0.10:
                 if self.time_hover is None:
                     self.time_hover = rospy.Time.now()
                 else:
-                    if (rospy.Time.now() - self.time_hover) >= rospy.Duration(5):
+                    if (rospy.Time.now() - self.time_hover) >= rospy.Duration(15):
                         self.landing_state = 'final_descend'
             # Ensures 5 consecutive seconds
             else:
@@ -375,11 +379,11 @@ class UAVController:
         # Final descent for landing on marker
         elif self.landing_state == 'final_descend':
             vel_x, vel_y, vel_z, delta_t, e_x, e_y, e_z = self.run_controllers()
-            vel_x = 0
-            vel_y = 0
+            # vel_x = 0
+            # vel_y = 0
 
             # Particle logic
-            if self.vz_controller.setpoint >= -0.20:
+            if self.vz_controller.setpoint >= -0.1:
                 self.v_particle = self.v_ref_final
             else:
                 self.v_particle = 0
@@ -401,8 +405,8 @@ class UAVController:
             variables.e_z = e_z
             self.error_pub.publish(variables)
 
-            # Particle should stop at -0.29 m, after filtered
-            if self.vz_controller.setpoint <= -0.2:
+            # Particle should stop at -0.2 m, after filtered
+            if self.vz_controller.setpoint <= -0.1:
                 if self.time_ground_contact is None:
                     self.time_ground_contact = rospy.Time.now()
                 else:
